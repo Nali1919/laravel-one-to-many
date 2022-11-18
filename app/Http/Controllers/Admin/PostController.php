@@ -1,8 +1,13 @@
 <?php
+
 namespace App\Http\Controllers\Admin;
+
 use App\Post;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use App\Category;
+use App\Tag;
+
 class PostController extends HomeController
 {
     /**
@@ -15,6 +20,7 @@ class PostController extends HomeController
         $posts = Post::all();
         return view('admin.posts.index', compact('posts'));
     }
+
     /**
      * Show the form for creating a new resource.
      *
@@ -22,8 +28,11 @@ class PostController extends HomeController
      */
     public function create()
     {
-        return view('admin.posts.create');
+        $categories = Category::all();
+        $tags = Tag::all();
+        return view('admin.posts.create', compact('categories', 'tags'));
     }
+
     /**
      * Store a newly created resource in storage.
      *
@@ -32,26 +41,37 @@ class PostController extends HomeController
      */
     public function store(Request $request)
     {
-        $request->validate([
-            'title'=>'required|min:5|max:255',
-            'content'=>'required'
-        ]);
+
+        $this->validatePost($request);
+
         $form_data = $request->all();
         $post = new Post();
         $post->fill($form_data);
-        $slug = Str::slug($post->title);
-        $slug_base = $slug;
-        $counter = 1;
-        $existingPost = Post::where('slug', $slug)->first();
-        while($existingPost){
-            $slug = $slug_base . '_' . $counter;
-            $existingPost = Post::where('slug', $slug)->first();
-            $counter++;
-        }
+
+        // $slug = Str::slug($post->title);
+        // $slug_base = $slug;
+        // $counter = 1;
+        // $existingPost = Post::where('slug', $slug)->first();
+
+        // while($existingPost){
+        //     $slug = $slug_base . '_' . $counter;
+        //     $existingPost = Post::where('slug', $slug)->first();
+        //     $counter++;
+        // }
+
+        $slug = $this->getSlug($post->title);
         $post->slug = $slug;
         $post->save();
+
+        if(array_key_exists('tags', $form_data)) {
+
+            $post->tags()->sync($form_data['tags']);
+        }
+
         return redirect()->route('admin.posts.show', $post->id);
+
     }
+
     /**
      * Display the specified resource.
      *
@@ -62,6 +82,7 @@ class PostController extends HomeController
     {
         return view('admin.posts.show', compact('post'));
     }
+
     /**
      * Show the form for editing the specified resource.
      *
@@ -70,8 +91,11 @@ class PostController extends HomeController
      */
     public function edit(Post $post)
     {
-        return view('admin.posts.edit', compact('post'));
+        $categories = Category::all();
+        $tags = Tag::all();
+        return view('admin.posts.edit', compact('post', 'categories', 'tags'));
     }
+
     /**
      * Update the specified resource in storage.
      *
@@ -81,18 +105,26 @@ class PostController extends HomeController
      */
     public function update(Request $request, Post $post)
     {
-        $request->validate([
-            'title'=>'required|min:5|max:255',
-            'content'=>'required'
-        ]);
+        $this->validatePost($request);
         $form_data = $request->all();
         if($post->title != $form_data['title']) {
             $slug = $this->getSlug($form_data['title']);
             $form_data['slug'] = $slug;
         }
+
+        if(array_key_exists('tags', $form_data)) {
+
+            $post->tags()->sync($form_data['tags']);
+        } else {
+
+            $post->tags()->sync([]);
+        }
+
         $post->update($form_data);
+
         return redirect()->route('admin.posts.show', $post->id);
     }
+
     /**
      * Remove the specified resource from storage.
      *
@@ -102,11 +134,14 @@ class PostController extends HomeController
     public function destroy(Post $post)
     {
         $post->delete();
+        $post->tags()->sync([]);
         return redirect()->route('admin.posts.index');
     }
+
     private function getSlug($title){
         $slug = Str::slug($title);
         $slug_base = $slug;
+
         $existingPost = Post::where('slug', $slug)->first();
         $counter = 1;
         while($existingPost){
@@ -116,17 +151,21 @@ class PostController extends HomeController
         }
         return $slug;
     }
+
+    private function validatePost(Request $request){
+        $request->validate([
+            'title' => 'required|min:5|max:255',
+            'content' => 'required',
+            'category_id' => 'nullable|exists:categories,id',
+            'tags'=>'exists:tags, id'
+        ], [
+            'required' => ':attribute is mandatory',
+            'min' => ':attribute should be at least :min chars',
+            'max' => ':attribute should have max length of :max chars',
+            'category_id.exists' => 'Category doesn\'t exists anymore :('
+        ]);
+    }
+
+
 }
-
-
-
-
-
-
-
-
-
-
-
-
 

@@ -1,8 +1,21 @@
 @extends('layouts.dashboard')
+
 @section('content')
+
 <h1>{{ $post->title }}</h1>
 <p>{{ $post->content }}</p>
+
+<div class="tags">
+    TAGS:
+    @foreach ($tags as $tag)
+        <span>
+            {{ $tag->name }}
+        </span>
+    @endforeach
+</div>
+
 <div class="row mb-5">
+
     <div class="col-12">
         <a href="{{route('admin.posts.edit', $post->id)}}">EDITA</a>
     </div>
@@ -14,6 +27,5 @@
       </form>
       </div>
 </div>
+
 @endsection
-
-
