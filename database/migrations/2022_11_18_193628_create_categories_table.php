@@ -31,4 +31,3 @@ class CreateCategoriesTable extends Migration
         Schema::dropIfExists('categories');
     }
 }
-
